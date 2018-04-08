@@ -136,6 +136,48 @@ let of_list l =
   in
   aux l
 
+let to_list s = 
+  let rec aux s = match s () with 
+    |Nil -> []
+    |Cons(a, sr) -> a :: (aux sr) 
+  in
+  aux s
+
+let of_array a = 
+  let rec aux i () = match a with 
+    |[||] -> Nil 
+    |_ -> Cons(Array.get a i, aux (i+1))
+  in 
+  aux 0
+
+let to_array s = 
+  let r= ref s in 
+  let rec array_of_ref r = let n = length !r in 
+    Array.init n (fun _ -> match !r () with
+        | Nil -> assert false
+        | Cons(e, s) ->
+          r := s;
+          e)           
+  in 
+  array_of_ref r
+
+let of_string str =
+  let rec aux i () = match str with
+    |"" -> Nil
+    |_ -> Cons(String.get str i, aux (i+1) )
+  in
+  aux 0
+
+let to_string s = let r= ref s in 
+  let rec string_of_ref r = let n = length !r in 
+    String.init n (fun _ -> match !r () with
+        | Nil -> assert false
+        | Cons(e, s) ->
+          r := s;
+          e)           
+  in 
+  string_of_ref r
+  
 let rec iter f s = match s () with
   | Nil -> ()
   | Cons(e, s) -> f e; iter f s

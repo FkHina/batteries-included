@@ -36,6 +36,7 @@ Changelog
   raised exceptions
   #840, #754
   (FkHina)
+<<<<<<< HEAD
 - Fix: [Array.insert] now throws a more relevant message on invalid indices
   instead of the generic [invalid_arg "index out of bounds].
   The assertion is now documented.
@@ -47,6 +48,9 @@ Changelog
 - Fix documentation of [String.right].
   #849, #844
   (Max Mouratov, reported by Thibault Suzanne)
+=======
+  
+>>>>>>> f7c04ea85c6dce065a895d5ea2c1eb83281db559
 
 ## v2.8.0 (minor release)
 

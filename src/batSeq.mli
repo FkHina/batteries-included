@@ -111,6 +111,21 @@ val of_list : 'a list -> 'a t
 (** Convenience function to build a seq from a list.
     @since 2.2.0 *)
 
+val to_list : 'a t -> 'a list
+(** Build a list from a sequence *)
+
+val of_array : 'a array -> 'a t
+(** Build a sequence from an array *)
+
+val to_array : 'a t -> 'a array
+(** Build an array from a sequence *)
+
+val of_string : string -> char t
+(** Build a char sequence from a string *)
+
+val to_string : char t -> string
+(** Build a string from a char sequence *)
+
 (** {6 Iterators} *)
 
 val iter : ('a -> unit) -> 'a t -> unit

@@ -779,10 +779,10 @@ val cut : char -> int -> string -> string
    [chr].}
    {- If there are only [n] occurrences of [chr] in [str], returns the
    substring between the last occurrence of [chr] and the end of [str]}
-   {- If there are strictly less than [n] occurrences of [chr] in [str], raise Not_found}
+   {- @raise Not_found, if there are strictly less than [n] occurences of [chr] in str}
    {- If [chr] is absent from [str], the behaviour is consistent with the preceding rules: {ul
        {- If [n] equals [0], returns the full [str]}
-       {- Otherwise, @raise Not_found}
+       {- Otherwise, @raise Not_found }
       }
    }
    {- If [n < 0], @raise Invalid_argument}
