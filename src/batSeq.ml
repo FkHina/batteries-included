@@ -152,15 +152,13 @@ let of_array a =
 
 let to_array s = 
   let r= ref s in 
-  let rec array_of_ref r = let n = length !r in 
+  let n = length !r in 
     Array.init n (fun _ -> match !r () with
         | Nil -> assert false
         | Cons(e, s) ->
           r := s;
           e)           
-  in 
-  array_of_ref r
-
+  
 let of_string str =
   let rec aux i () = match str with
     |"" -> Nil
@@ -169,14 +167,12 @@ let of_string str =
   aux 0
 
 let to_string s = let r= ref s in 
-  let rec string_of_ref r = let n = length !r in 
+   let n = length !r in 
     String.init n (fun _ -> match !r () with
         | Nil -> assert false
         | Cons(e, s) ->
           r := s;
-          e)           
-  in 
-  string_of_ref r
+          e)     
   
 let rec iter f s = match s () with
   | Nil -> ()
