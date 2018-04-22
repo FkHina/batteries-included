@@ -28,12 +28,45 @@ type 'a mappable = 'a t
 let nil () = Nil
 let cons e s () = Cons(e, s)
 
+let singleton e = Cons (e, fun () -> Nil)
+
 let length s =
   let rec aux acc s = match s () with
     | Nil -> acc
     | Cons(_, s) -> aux (acc + 1) s
   in
   aux 0 s
+
+let rec compare_lengths sa sb = match sa (), sb () with 
+  |Nil, Nil -> 0
+  |Nil, Cons(_, _) -> -1
+  |Cons(_, _), Nil -> 1
+  |Cons(_, a), Cons(_, b) -> compare_lengths a b
+
+(*$T compare_lengths
+compare_lengths (of_list []) (of_list []) = 0
+compare_lengths (of_list []) (of_list[1]) = -1
+compare_lengths (of_list []) (of_list []) = 0
+compare_lengths (of_list [1]) (of_list []) = 1
+compare_lengths (of_list [1; 2]) (of_list [3; 4]) = 0
+compare_lengths (of_list [1; 2; 3]) (of_list [3; 4]) = 1
+compare_lengths (of_list [1; 2]) (of_list [2; 3; 4]) = -1
+*)
+                               
+let rec compare_length_with s n = match s (), n with 
+  |Nil, 0 -> 0
+  |Nil, n -> -1
+  |Cons(_, s), 0 -> 1
+  |Cons(_, s), n -> compare_length_with s (n-1)
+
+(*$T compare_length_with
+compare_length_with (of_list []) 0 = 0
+compare_length_with (of_list []) 1 = -1
+compare_length_with (of_list [1]) 0 = 1
+compare_length_with (of_list [1; 2]) 2 = 0
+compare_length_with (of_list [1; 2; 3]) 2 = 1
+compare_length_with (of_list [1; 2]) 3 = -1
+*)
 
 let rec enum_of_ref r =
   BatEnum.make
@@ -71,6 +104,11 @@ let last s =
 
 let is_empty s = s () = Nil
 
+let junk s =
+  match s () with
+  | Nil -> invalid_arg "Seq.junk : empty seq"
+  | Cons(e, s) -> s
+
 let at s n =
   let rec aux s n =
     match s () with
@@ -85,6 +123,23 @@ let at s n =
     invalid_arg "Seq.at"
   else
     aux s n
+        
+let at_opt s n =
+  try Some (at s n) with _ -> None
+
+(*$T at_opt
+  at_opt (of_list []) 0 = None
+  at_opt (of_list []) (-1) = None
+  at_opt (of_list [1;2;3]) 2 = Some 3
+*)
+
+let exists2 p s1 s2=   
+  let rec loop s1 s2 = 
+    match s1 (), s2 () with 
+    |Nil, Nil-> false 
+    |Cons(e1, s1), Cons(e2, s2) -> if p e1 e2 then true else loop s1 s2 
+    |_ -> invalid_arg "Seq.exists2: sequences lengths differ"
+  in loop s1 s2 
 
 let rec append s1 s2 () = match s1 () with
   | Nil -> s2 ()
@@ -128,7 +183,7 @@ let init n f =
     invalid_arg "Seq.init"
   else
     aux 0
-
+    
 let of_list l =
   let rec aux l () = match l with
     | [] -> Nil
@@ -136,12 +191,11 @@ let of_list l =
   in
   aux l
 
-let to_list s = 
-  let rec aux s = match s () with 
-    |Nil -> []
-    |Cons(a, sr) -> a :: (aux sr) 
-  in
-  aux s
+
+let rec to_list s =
+  match s () with
+  | Nil -> []
+  | Cons(x, s) -> x :: to_list s
 
 let of_array a = 
   let rec aux i () = match a with 
@@ -152,7 +206,7 @@ let of_array a =
 
 let to_array s = 
   let r= ref s in 
-  let n = length !r in 
+  let n = length s in 
     Array.init n (fun _ -> match !r () with
         | Nil -> assert false
         | Cons(e, s) ->
@@ -162,12 +216,12 @@ let to_array s =
 let of_string str =
   let rec aux i () = match str with
     |"" -> Nil
-    |_ -> Cons(String.get str i, aux (i+1) )
+    |_ -> Cons(str.[i], aux (i+1) )
   in
   aux 0
 
 let to_string s = let r= ref s in 
-   let n = length !r in 
+   let n = length s in 
     String.init n (fun _ -> match !r () with
         | Nil -> assert false
         | Cons(e, s) ->
@@ -348,6 +402,7 @@ let rec drop_while f s = match s () with
     else
       cons e s
 
+        
 let split s = (map fst s, map snd s)
 
 let rec combine s1 s2 () = match s1 (), s2 () with
@@ -357,6 +412,53 @@ let rec combine s1 s2 () = match s1 (), s2 () with
     Cons((e1, e2), combine s1 s2)
   | _ ->
     raise (Invalid_argument "Seq.combine")
+
+let span test s = take_while test s, drop_while test s                    
+
+(*$T span
+  of_list [1;2;3;4;5] |> span (fun x-> x<4) |> Tuple2.mapn to_list = \
+    ( [1;2;3], [4;5])
+  *)
+
+let break test s = span (fun x -> not (test x)) s
+
+let rec scanl f acc s () = 
+match s () with 
+| Nil -> singleton acc 
+| Cons(x, xs) -> Cons(acc, scanl f (f acc x) xs) 
+
+let scan f s =
+  match s () with
+  |Nil -> nil
+  |Cons(e, sr) -> scanl f e s
+
+let rec fold2 f acc s1 s2 = 
+  match s1 (), s2 () with
+  | Nil, _ -> acc
+  | _, Nil -> acc
+  | Cons(e1, s1), Cons(e2, s2) -> fold2 f (f e1 e2 acc) s1 s2
+
+let rec fold2i f acc s1 s2 = 
+  let rec loop idx = 
+    match s1 (), s2 () with
+    | Nil, _ -> acc
+    | _, Nil ->  acc
+    | Cons(e1, s1), Cons(e2, s2) -> fold2i f (f (idx+1) e1 e2 acc) s1 s2
+  in loop 0
+
+let rec group f s () =
+  match s() with 
+  |Nil -> Nil 
+  |Cons(x, s) -> let r = f x in let xs, ys = span (fun y -> r = f y) s in Cons(cons x xs, group f ys)
+      
+(*$T group
+   of_list [1;2;3;4] |> group (fun x -> x) |> map to_list \
+    |> to_list = [[1];[2];[3];[4]]
+   of_list [] |> group (fun x -> x) |> to_list \
+   = []
+   of_list [1;2;3;5;6;7;9;10;4;5] |> group (fun x -> x mod 2) \
+    |> map to_list |> to_list =  [[1];[2];[3;5];[6];[7;9];[10;4];[5]]
+*)
 
 let print ?(first="[") ?(last="]") ?(sep="; ") print_a out s = match s () with
   | Nil ->
