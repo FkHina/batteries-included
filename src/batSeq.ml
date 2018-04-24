@@ -28,8 +28,6 @@ type 'a mappable = 'a t
 let nil () = Nil
 let cons e s () = Cons(e, s)
 
-let singleton e = Cons (e, fun () -> Nil)
-
 let length s =
   let rec aux acc s = match s () with
     | Nil -> acc
@@ -103,6 +101,11 @@ let last s =
   | Cons(e, s) -> aux e s
 
 let is_empty s = s () = Nil
+
+let peek s =
+  match s () with
+  | Nil -> None
+  | Cons(e,s) -> Some e
 
 let junk s =
   match s () with
@@ -183,6 +186,41 @@ let init n f =
     invalid_arg "Seq.init"
   else
     aux 0
+
+let singleton e = init 1 (fun _ -> e)
+
+let repeat ?times x = match times with
+  | None -> let rec aux () =
+              Cons (x, aux)
+    in aux
+  | Some n -> init n (fun _ -> x)
+
+(*$T
+  repeat ~times:5 0 |> of_list = [0;0;0;0;0]
+  repeat 1 |> take 3 |> of_list = [1;1;1]
+*)
+
+let cycle ?times s =
+  let seq =
+    match times with
+    | None -> let rec aux () =
+                Cons(s, aux)
+              in aux
+    | Some n -> init n (fun _ -> s)
+  in
+  concat seq
+
+(*$T
+  cycle ~times:5 (singleton 1) |> of_list = [1;1;1;1;1]
+  cycle (List.enum [1;2]) |> take 5 |> of_list = [1;2;1;2;1]
+*)
+    
+let rec seq acc step cond () =
+  if cond acc
+  then begin
+    Cons(acc ,seq (step acc) step cond)
+  end
+  else Nil
     
 let of_list l =
   let rec aux l () = match l with
@@ -190,7 +228,6 @@ let of_list l =
     | x::l' -> Cons(x, aux l')
   in
   aux l
-
 
 let rec to_list s =
   match s () with

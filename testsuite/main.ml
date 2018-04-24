@@ -34,7 +34,8 @@ let all_tests =
     Test_bounded.tests;
     Test_modifiable.tests;
     Test_hashtbl.tests;
+    Test_seq.tests;
   ]
 
 let () =
-  ignore(OUnit.run_test_tt_main ("All" >::: all_tests));
+ignore(OUnit.run_test_tt_main ("All" >::: all_tests));module X = Test_interface

@@ -52,9 +52,18 @@ val enum : 'a t -> 'a BatEnum.t
 
 (** {6 Base operations} *)
 
+val singleton : 'a -> 'a t
+    (** [singleton e] returns an 'a t  containing e, equivalent to init 1 ( fun _ -> x) *)
+
 val length : 'a t -> int
 (** Return the number of elements of the given sequence. This may
     never return if the sequence is infinite. *)
+
+val compare_lengths : 'a t -> 'b t -> int
+(**  Compare the lengths of two sequences, the computation stops after itering on the shortest sequence. *)
+
+val compare_length_with :  'a t -> int -> int
+(** Compare the length of a sequence to an integer. *)
 
 val hd : 'a t -> 'a
 (** Returns the first element of the sequence or raise [Invalid_argument] if
@@ -68,6 +77,14 @@ val is_empty : 'a t -> bool
 (** [is_empty e] returns true if [e] does not contains any
     element. *)
 
+val peek : 'a t -> 'a option
+(** [peek s] returns [None] if [e] is empty or [Some x] where [x] is
+    the next element of [e].*)
+  
+val junk : 'a t -> 'a t
+(** junk s removes the first element from the sequence.
+    [Invalid_argument] if the sequence is empty. *)
+
 val first : 'a t -> 'a
 (** Same as {!hd} *)
 
@@ -79,6 +96,10 @@ val at : 'a t -> int -> 'a
 (** [at l n] returns the element at index [n] (starting from [0]) in
     the sequence [l] or raise [Invalid_argument] is the index is
     outside of [l] bounds. *)
+
+val at_opt : 'a t -> int -> 'a option
+(** [at_opt s n] returns [Some e] where [e] is the n-th element of the given sequence or     [None] 
+    @raise Invalid_argument if [n] is negative. *)
 
 val append : 'a t -> 'a t -> 'a t
 (** [append s1 s2] returns the sequence which first returns all
@@ -107,12 +128,21 @@ val init : int -> (int -> 'a) -> 'a t
 (** [init n f] returns the sequence returning the results of [f 0],
     [f 1].... [f (n-1)]. @raise Invalid_argument if [n < 0]. *)
 
+val repeat : ?times:int -> 'a -> 'a t
+(** repeat ~times:n x creates a  sequence filled with n times of x. It return infinite enum when ~times is absent. It returns invalid_argument when times <= 0. *)
+
+val cycle : ?times:int -> 'a t -> 'a t
+(** cycle is similar to repeat, except that the content to fill is a subseq rather than a single element. Note that times represents the times of repeating not the length of sequence.*)
+val seq : 'a -> ('a -> 'a) -> ('a -> bool) -> 'a t
+(** seq init step cond creates a sequence of data, which starts from init, extends by step, until the condition cond fails. E.g. seq 1 ((+) 1) ((>) 100) returns 1, 2, ... 99. If cond init is false, the result is empty.*)
+    
 val of_list : 'a list -> 'a t
 (** Convenience function to build a seq from a list.
     @since 2.2.0 *)
 
 val to_list : 'a t -> 'a list
-(** Build a list from a sequence *)
+(** Build a list from a sequence. In the result, elements appear in the
+    same order as they did in the source. *) 
 
 val of_array : 'a array -> 'a t
 (** Build a sequence from an array *)
@@ -214,6 +244,10 @@ val exists : ('a -> bool) -> 'a t -> bool
     [(p a0) || (p a1) || ...]. Eager, shortcut.
 *)
 
+val exists2 :  ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+(** Same as {!Seq.exists}, but for a two-argument predicate. 
+    @raise Invalid_argument if two sequences have different lengths. *)
+
 val mem : 'a -> 'a t -> bool
 (** [mem a l] is true if and only if [a] is equal to an element of
     [l]. Eager, shortcut.
@@ -284,7 +318,29 @@ val combine : 'a t -> 'b t -> ('a * 'b) t
 (** Transform a pair of sequences into a sequence of pairs. Lazy.
 
     @raise Invalid_argument if given sequences of different length. *)
+   
+val span : ('a -> bool) -> 'a t -> 'a t * 'a t
+(** span test s produces two sequences (hd, tl), such that hd is the same as take_while test s and tl is the same as drop_while test s. *)
+                                     
 
+val break : ('a -> bool) -> 'a t -> 'a t * 'a t
+(** Negated span. break test s is equivalent to span (fun e -> not (test e)) s. *)
+
+val scanl : ('a -> 'b -> 'a) -> 'a -> 'b t -> 'a t
+(** A variant of fold producing an sequence of its intermediate values. If s contains x1, x2, ..., scanl f init s is the sequence containing init, f init x1, f (f init x1) x2...*)
+
+val scan : ('a -> 'a -> 'a) -> 'a t -> 'a t
+(** scan is similar to scanl but without the init value: if s contains x1, x2, x3 ..., scan f s is the sequence containing x1, f x1 x2, f (f x1 x2) x3... 
+    For instance, scan ( * ) (1 -- 10) will produce a sequence containing the successive values of the factorial function.*)
+
+val fold2 : ('a -> 'b -> 'c -> 'c) -> 'c -> 'a t -> 'b t -> 'c
+(** fold2 is similar to fold_left but will fold over two enumerations at the same time until one of the two enumerations ends.*)
+
+val fold2i : (int -> 'a -> 'b -> 'c -> 'c) -> 'c -> 'a t -> 'b t -> 'c
+(** similar to previousfold2  except that they call the function with one additional argument which is an index starting at 0 and incremented after each call to the function.*)
+
+val group : ('a -> 'b) -> 'a t -> 'a t t
+(** group test e devides e into a sequence of sequences, where each sub-sequence is the longest continuous enumeration of elements whose test results are the same.*)
 (** {6 Printing} *)
 
 val print : ?first:string -> ?last:string -> ?sep:string -> ('a BatInnerIO.output -> 'b -> unit) ->  'a BatInnerIO.output -> 'b t -> unit
