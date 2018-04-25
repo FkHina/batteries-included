@@ -771,6 +771,11 @@ val of_backwards : 'a BatEnum.t -> 'a list
     enumeration
     becomes the second-to-last element of the list... *)
     
+
+val of_seq : 'a BatSeq.t -> 'a list
+(** Build a list from a sequence. In the result, elements appear in the
+    same order as they did in the source sequence. *)
+
 (** {6 List of pairs}*)
 
 val split : ('a * 'b) list -> 'a list * 'b list
@@ -786,7 +791,6 @@ val combine : 'a list -> 'b list -> ('a * 'b) list
     [[(a0,b0); (a1,b1); ...; (an,bn)]].
     @raise Different_list_size if the two lists
     have different lengths.  Tail-recursive. *)
-
 
 (** {6 Sorting}*)
 
@@ -845,7 +849,6 @@ val sort_unique : ('a -> 'a -> int) -> 'a list -> 'a list
 
 
 (** {6 Utilities}*)
-
 
 val group : ('a -> 'a -> int) -> 'a list -> 'a list list
 (** [group cmp l] returns list of groups and each group consists of

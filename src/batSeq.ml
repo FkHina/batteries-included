@@ -136,6 +136,24 @@ let at_opt s n =
   at_opt (of_list [1;2;3]) 2 = Some 3
 *)
 
+let remove_at i s=
+  let rec loop i s () = 
+    match s () with
+    | Nil -> invalid_arg "Seq.remove_at : empty sequence"
+    | Cons(e, s) -> if i= 0 then s () else Cons(e,loop (i-1) s)
+  in
+  if i <0
+  then  invalid_arg "Seq.remove_at : negative index"
+  else loop i s
+
+(*$T remove_at
+  try ignore (remove_at 0 (of_list [])) ; false with Invalid_argument _ -> true
+  try ignore (remove_at 1 (of_list [0])); false with Invalid_argument _ -> true
+ equal (remove_at 0 of_list[0]) (of_list [])
+  remove_at 0 (of_list [0; 1; 2]) (of_list [1; 2])
+  remove_at 1 (of_list [0; 1; 2]) (of_list [0; 2])
+  remove_at 2 (of_list [0; 1; 2]) (of_list [0; 1])
+*)
 let exists2 p s1 s2=   
   let rec loop s1 s2 = 
     match s1 (), s2 () with 
@@ -196,10 +214,10 @@ let repeat ?times x = match times with
   | Some n -> init n (fun _ -> x)
 
 (*$T
-  repeat ~times:5 0 |> of_list = [0;0;0;0;0]
-  repeat 1 |> take 3 |> of_list = [1;1;1]
+ equal (repeat ~times:5 0) (of_list [0;0;0;0;0])
+ equal (repeat 1 |> take 3) (of_list [1;1;1])
 *)
-
+                
 let cycle ?times s =
   let seq =
     match times with
@@ -211,10 +229,16 @@ let cycle ?times s =
   concat seq
 
 (*$T
-  cycle ~times:5 (singleton 1) |> of_list = [1;1;1;1;1]
-  cycle (List.enum [1;2]) |> take 5 |> of_list = [1;2;1;2;1]
+  equal (cycle ~times:5 (singleton 1)) (of_list [1;1;1;1;1])
+  equal (cycle (of_list [1;2]) |> take 5) (of_list [1;2;1;2;1])
 *)
-    
+
+
+let rec from_fun f ()=
+  match f () with
+  | None -> Nil
+  | Some e -> Cons(e, from_fun f)
+                
 let rec seq acc step cond () =
   if cond acc
   then begin
@@ -461,7 +485,7 @@ let break test s = span (fun x -> not (test x)) s
 
 let rec scanl f acc s () = 
 match s () with 
-| Nil -> singleton acc 
+| Nil -> Cons(acc, fun () -> Nil) 
 | Cons(x, xs) -> Cons(acc, scanl f (f acc x) xs) 
 
 let scan f s =

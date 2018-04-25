@@ -1130,8 +1130,6 @@ let of_enum e =
   let _ = BatEnum.fold Acc.accum h e in
   h.tl
 
-
-
 let backwards l = enum (rev l) (*TODO: should we make it more efficient?*)
 (*let backwards l = (*This version only needs one pass but is actually less lazy*)
   let rec aux acc = function
@@ -1139,12 +1137,16 @@ let backwards l = enum (rev l) (*TODO: should we make it more efficient?*)
     | h::t -> aux BatEnum.append (BatEnum.singleton h) acc
   in aux l*)
 
-
 let of_backwards e =
   let rec aux acc = match BatEnum.get e with
     | Some h -> aux (h::acc)
     | None   -> acc
   in aux []
+    
+let rec of_seq s =
+  match s () with
+  | Nil -> []
+  | Cons(x, s) -> x :: of_seq s
                     
 let assoc_inv e l =
   let rec aux = function

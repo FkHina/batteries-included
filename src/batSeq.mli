@@ -133,6 +133,10 @@ val repeat : ?times:int -> 'a -> 'a t
 
 val cycle : ?times:int -> 'a t -> 'a t
 (** cycle is similar to repeat, except that the content to fill is a subseq rather than a single element. Note that times represents the times of repeating not the length of sequence.*)
+
+val from_fun :  (unit -> 'a option) -> 'a t
+(** Build a sequence from a function,Call the function repeatedly until it returns None.*)
+    
 val seq : 'a -> ('a -> 'a) -> ('a -> bool) -> 'a t
 (** seq init step cond creates a sequence of data, which starts from init, extends by step, until the condition cond fails. E.g. seq 1 ((+) 1) ((>) 100) returns 1, 2, ... 99. If cond init is false, the result is empty.*)
     
@@ -320,8 +324,7 @@ val combine : 'a t -> 'b t -> ('a * 'b) t
     @raise Invalid_argument if given sequences of different length. *)
    
 val span : ('a -> bool) -> 'a t -> 'a t * 'a t
-(** span test s produces two sequences (hd, tl), such that hd is the same as take_while test s and tl is the same as drop_while test s. *)
-                                     
+(** span test s produces two sequences (hd, tl), such that hd is the same as take_while test s and tl is the same as drop_while test s. *)                                     
 
 val break : ('a -> bool) -> 'a t -> 'a t * 'a t
 (** Negated span. break test s is equivalent to span (fun e -> not (test e)) s. *)
