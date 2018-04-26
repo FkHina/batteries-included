@@ -26,6 +26,7 @@ and 'a t = unit -> 'a node
 type 'a mappable = 'a t
 
 let nil () = Nil
+  
 let cons e s () = Cons(e, s)
 
 let length s =
@@ -162,8 +163,7 @@ let exists2 p s1 s2=
     |_ -> invalid_arg "Seq.exists2: sequences lengths differ"
   in loop s1 s2 
 
-let rec append s1 s2 () = match s1 () with
-  | Nil -> s2 ()
+let rec append s1 s2 () = match s1 () with  | Nil -> s2 ()
   | Cons(e, s1) -> Cons(e, append s1 s2)
 
 let concat s =
@@ -181,6 +181,8 @@ let concat s =
 
 let flatten = concat
 
+let empty = fun () -> Nil
+  
 let make n e =
   let rec aux n () =
     if n = 0 then
@@ -245,6 +247,12 @@ let rec seq acc step cond () =
     Cons(acc ,seq (step acc) step cond)
   end
   else Nil
+
+let range ?until x =
+  let cond =  match until with
+    | None   -> ( fun _ -> true   )
+    | Some n -> ( fun m -> m <= n )
+in seq x ( ( + ) 1 ) cond
     
 let of_list l =
   let rec aux l () = match l with
@@ -340,7 +348,7 @@ let rec map2 f s1 s2 () = match s1 (), s2 () with
   equal (map2 (+) (of_list [1;2;3]) (of_list [3;2])) \
     (of_list [4;4])
  *)
-
+    
 let rec fold_left f acc s = match s () with
   | Nil -> acc
   | Cons(e, s) -> fold_left f (f acc e) s
@@ -360,6 +368,17 @@ let max s = match s () with
 let min s = match s () with
   | Nil -> raise (Invalid_argument "Seq.min")
   | Cons(e, s) -> fold_left Pervasives.min e s
+
+
+let sum s =
+  match s () with 
+  | Nil -> 0 
+  | Cons(e, s) -> fold_left (+) e  s
+
+let fsum s =
+  match s () with
+  | Nil -> 0.0
+  | Cons(e, s) -> fold_left (+.) e s
 
 let equal ?(eq=(=)) s1 s2 =
   let rec recurse eq s1 s2 =
@@ -463,6 +482,7 @@ let rec drop_while f s = match s () with
     else
       cons e s
 
+let skip n s = drop n s; s
         
 let split s = (map fst s, map snd s)
 
@@ -474,6 +494,77 @@ let rec combine s1 s2 () = match s1 (), s2 () with
   | _ ->
     raise (Invalid_argument "Seq.combine")
 
+let  uncombine s = 
+  let rec aux s1 s2 s= 
+    match s () with 
+    | Nil -> s1, s2
+    | Cons ((e1, e2), sr) -> aux  (append s1 (singleton e1)) (append s2 (singleton e2)) sr
+  in aux empty empty s
+
+(*$T uncombine
+  let s1, s2 = uncombine (of_list [1,2;3,4;5,6;7,8;9,0])
+  in
+  equal s1 (of_list [1;3;5;7;9]); equal s2 (of_list [2;4;6;8;0])
+*)
+
+let rec uniq s () =
+  match s () with
+  | Nil -> Nil
+  | Cons(e, sr) -> let r = drop_while (fun x -> x = e) s in Cons(e, uniq r)
+
+(*$T
+ equal ( uniq (of_list [1;1;2;3;3;2])) (of_list [1;2;3;2])
+*)
+
+let rec uniqq s () =
+  match s () with
+  | Nil -> Nil
+  | Cons(e, sr) -> let r = drop_while (fun x -> x == e) s in Cons(e, uniq r)
+      
+(*$T
+ equal ( uniqq (of_list [1;1;2;3;3;2])) (of_list [1;2;3;2])
+*)
+      
+let rec uniq_by  f s () =
+  match s () with
+  | Nil -> Nil
+  | Cons (e, s) -> let r = drop_while (fun x -> f x e) s in Cons(e, uniq_by f r)
+      
+(*$T
+  of_list ["a";"A";"b";"c";"C";"b"] 
+  |> uniq_by (fun a b -> String.lowercase a = String.lowercase b) 
+  |> to_list = ["a";"b";"c";"b"]
+*)
+
+let partition f s=  
+  let rec aux yesSeq noSeq s =  
+    match s () with 
+    | Nil -> yesSeq, noSeq
+    | Cons(e, s) -> if f e then aux (append yesSeq (singleton e)) noSeq s else aux yesSeq (append noSeq (singleton e)) s
+  in
+  aux nil nil s
+
+(*$T
+  let yesSeq, noSeq = partition (fun x -> x mod 2 = 0)  (of_list [1;2;3;4])
+  in
+  equal yesSeq (of_list [2;4]);
+  equal noSeq (of_list [1;3])
+*)
+
+
+let rec merge test a b () =
+  match a (), b () with
+  | Nil, _-> b ()
+  | _, Nil -> a ()
+  | Cons(e1, s1), Cons(e2, s2) -> if test e1 e2 then Cons(e1, cons e2 (merge test s1 s2)) else Cons(e2, cons e1 (merge test s1 s2))
+
+(* $T
+let a=of_list [1;3;5] and b = of_list [2;4] in
+equal (merge (fun x y -> x < y) a b) (of_list [1;2;3;4;5])
+*)
+        
+let concat_map f s = concat (map f s)
+    
 let span test s = take_while test s, drop_while test s                    
 
 (*$T span
@@ -521,6 +612,11 @@ let rec group f s () =
     |> map to_list |> to_list =  [[1];[2];[3;5];[6];[7;9];[10;4];[5]]
 *)
 
+let rec group_by eq s () =
+  match s () with
+  | Nil -> Nil
+  | Cons(e, s) -> let xs, ys = span (fun x -> eq x e) s in Cons(cons e xs, group_by eq ys)
+      
 let print ?(first="[") ?(last="]") ?(sep="; ") print_a out s = match s () with
   | Nil ->
     BatInnerIO.nwrite out first;

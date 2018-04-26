@@ -120,6 +120,9 @@ val nil : 'a t
 val cons : 'a -> 'a t -> 'a t
 (** [cons e s = fun () -> Cons(e, s)] *)
 
+val empty : unit -> 'a t
+(** The empty sequence contains no elements.*)
+    
 val make : int -> 'a -> 'a t
 (** [make n e] returns the sequence of length [n] where all elements
     are [e] *)
@@ -139,7 +142,10 @@ val from_fun :  (unit -> 'a option) -> 'a t
     
 val seq : 'a -> ('a -> 'a) -> ('a -> bool) -> 'a t
 (** seq init step cond creates a sequence of data, which starts from init, extends by step, until the condition cond fails. E.g. seq 1 ((+) 1) ((>) 100) returns 1, 2, ... 99. If cond init is false, the result is empty.*)
-    
+
+val range : ?until:int -> int -> int t
+(**range p until:q creates a sequence of integers [p, p+1, ..., q]. If until is omitted, the enumeration is not bounded. Behaviour is not-specified once max_int has been reached.*)
+
 val of_list : 'a list -> 'a t
 (** Convenience function to build a seq from a list.
     @since 2.2.0 *)
@@ -218,6 +224,12 @@ val min : 'a t -> 'a
 
     @raise Invalid_argument on empty sequences. *)
 
+val sum : int t -> int
+(** sum returns the sum of the given int sequence. If the argument is empty, returns 0.*)
+
+val fsum : float t -> float
+(** sum returns the sum of the given float sequence. If the argument is empty, returns 0.0.*)
+  
 val equal : ?eq:('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   (** [equal ~eq s1 s2] compares elements of [s1] and [s2] pairwise
       using [eq]
@@ -313,6 +325,11 @@ val drop_while : ('a -> bool) -> 'a t -> 'a t
 (** [drop_while f s] returns the sequence [s] with the first
     elements satisfying the predicate [f] dropped. Lazy. *)
 
+val skip : int -> 'a t -> 'a t
+(** skip n e removes the first n element from the sequence, if any, then returns empty sequence.
+    This function has the same behavior as drop but is often easier to compose with, e.g., skip 5 %> take 3 is a new function which skips 5 elements and then returns the next 3 elements.*)
+
+
 (** {6 Sequence of pairs} *)
 
 val split : ('a * 'b) t -> 'a t * 'b t
@@ -320,9 +337,43 @@ val split : ('a * 'b) t -> 'a t * 'b t
 
 val combine : 'a t -> 'b t -> ('a * 'b) t
 (** Transform a pair of sequences into a sequence of pairs. Lazy.
-
     @raise Invalid_argument if given sequences of different length. *)
-   
+
+val uncombine : ('a * 'b) t -> 'a t * 'b t
+(**  uncombine is the opposite of combine.*)
+
+val uniq : 'a t -> 'a t
+(** uniq e returns a duplicate of e with repeated values omitted (similar to unix's uniq command).It uses structural equality to compare consecutive elements.*)
+
+val uniqq : 'a t -> 'a t
+(** uniqq e behaves as uniq e except it uses physical equality to compare consecutive elements.*)
+
+val uniq_by : ('a -> 'a -> bool) -> (unit -> 'a node) -> 'a t
+(** uniq_by cmp e behaves as uniq e except it allows to specify a comparison function.*)
+
+val partition :  ('a -> bool) -> 'a t -> 'a t * 'a t
+(** partition test seq splits seq into two sequences, where the first seq has all the elements satisfying test, the second one is opposite. The order of elements in the source seq is preserved.                                        
+*)
+
+val merge : ('a -> 'a -> bool) -> 'a t -> 'a t -> 'a t
+(** merge test a b merge the elements from a and b into a single sequence. At each step, test is applied to the first element xa of a and the first element xb of b to determine which should get first into resulting sequence. If test xa xb returns true, xa (the first element of a) is used, otherwise xb is used. If a or b runs out of elements, the process will append all elements of the other sequence to the result.
+
+   For example, if a and b are sequences of integers sorted in increasing order, then merge (<) a b will also be sorted.
+*)
+
+val arg_min : ('a -> 'b) -> 'a t -> 'a
+
+val arg_max : ('a -> 'b) -> 'a t -> 'a
+
+(** arg_min f xs returns the x in xs for which f x is minimum. Similarly for arg_max, except it returns the maximum. If multiple values reach the maximum, one of them is returned. (currently the first, but this is not guaranteed)
+
+    Example: List.enum ["cat"; "canary"; "dog"; "dodo"; "ant"; "cow"] |> arg_max String.length = "canary"
+
+    @raise Invalid_argument if the input seq is empty.*)
+
+val concat_map :  ('a -> 'b t) -> 'a t -> 'b t
+(** concat_map f e is the same as concat (map f e).*)
+
 val span : ('a -> bool) -> 'a t -> 'a t * 'a t
 (** span test s produces two sequences (hd, tl), such that hd is the same as take_while test s and tl is the same as drop_while test s. *)                                     
 
@@ -344,6 +395,10 @@ val fold2i : (int -> 'a -> 'b -> 'c -> 'c) -> 'c -> 'a t -> 'b t -> 'c
 
 val group : ('a -> 'b) -> 'a t -> 'a t t
 (** group test e devides e into a sequence of sequences, where each sub-sequence is the longest continuous enumeration of elements whose test results are the same.*)
+
+val group_by : ('a -> 'a -> bool) -> 'a t -> 'a t t
+(** group_by eq e divides e into a sequence of sequences, where each sub-sequence is the longest continuous enumeration of elements that are equal, as judged by eq.*)
+                                                                             
 (** {6 Printing} *)
 
 val print : ?first:string -> ?last:string -> ?sep:string -> ('a BatInnerIO.output -> 'b -> unit) ->  'a BatInnerIO.output -> 'b t -> unit
