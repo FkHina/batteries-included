@@ -574,6 +574,10 @@ let span test s = take_while test s, drop_while test s
 
 let break test s = span (fun x -> not (test x)) s
 
+let while_do cont f e =
+  let (head, tail) = span cont e in
+append (f head) tail
+
 let rec scanl f acc s () = 
 match s () with 
 | Nil -> Cons(acc, fun () -> Nil) 

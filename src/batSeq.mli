@@ -380,6 +380,11 @@ val span : ('a -> bool) -> 'a t -> 'a t * 'a t
 val break : ('a -> bool) -> 'a t -> 'a t * 'a t
 (** Negated span. break test s is equivalent to span (fun e -> not (test e)) s. *)
 
+val while_do : ('a -> bool) -> ('a t -> 'a t) -> 'a t -> 'a t
+(** while_do cont f e is a loop on e using f as body and cont as condition for continuing.
+    If e contains elements x0, x1, x2..., then if cont x0 is false, x0 is returned as such and treatment stops. On the other hand, if cont x0 is true, f x0 is returned and the loop proceeds with x1...
+*)                                                  
+
 val scanl : ('a -> 'b -> 'a) -> 'a -> 'b t -> 'a t
 (** A variant of fold producing an sequence of its intermediate values. If s contains x1, x2, ..., scanl f init s is the sequence containing init, f init x1, f (f init x1) x2...*)
 
