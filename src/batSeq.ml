@@ -804,8 +804,12 @@ let cartesian_product a b =
 (*$T cartesian_product
   equal (cartesian_product (of_list [1;2]) (of_list ["a";"b"]))\
   (of_list [ 1,"a"; 1,"b"; 2,"a"; 2, "b" ])
+  equal (cartesian_product (of_list [1;2;3]) (of_list [1]))\
+  (of_list [1,1; 2,1; 3,1])
+  equal (cartesian_product (of_list [1]) (of_list [1;2;3])) \
+    (of_list [1,1; 1,2; 1,3])
 *)
-
+    
 let switch test s =
   let rec aux yesSeq noSeq s  =
     match s () with
