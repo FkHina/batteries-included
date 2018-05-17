@@ -44,6 +44,10 @@ and 'a node =
 
 include BatInterfaces.Mappable with type 'a mappable = 'a t
 
+exception No_more_elements
+(** This exception {i shall} be raised by the [next] function of 
+    [from] when no more elements can be enumerated.
+*)
 val enum : 'a t -> 'a BatEnum.t
 (** [enum s] returns the enumeration of all element of [s].
 
@@ -80,6 +84,15 @@ val is_empty : 'a t -> bool
 val peek : 'a t -> 'a option
 (** [peek s] returns [None] if [e] is empty or [Some x] where [x] is
     the next element of [e].*)
+    
+ val get : 'a t -> 'a option
+(** [get s] returns [None] if [s] is empty or [Some x] where [x] is
+    the next element of [s].
+*)
+
+val push : 'a t -> 'a -> 'a t
+(** [push s x] will add [x] at the beginning of [s]. 
+*)
   
 val junk : 'a t -> 'a t
 (** junk s removes the first element from the sequence.
@@ -137,8 +150,41 @@ val repeat : ?times:int -> 'a -> 'a t
 val cycle : ?times:int -> 'a t -> 'a t
 (** cycle is similar to repeat, except that the content to fill is a subseq rather than a single element. Note that times represents the times of repeating not the length of sequence.*)
 
-val from_fun :  (unit -> 'a option) -> 'a t
-(** Build a sequence from a function,Call the function repeatedly until it returns None.*)
+val from : (unit -> 'a) -> 'a t
+(** [from next] creates a sequence from the [next] function.
+    [next] {i shall} return the next element of the sequence or raise
+    [No_more_elements].
+ *)
+
+val from_while :  (unit -> 'a option) -> 'a t
+(** Build a sequence from a function,Call the function repeatedly until it returns None.
+    [from_while next] creates an sequence from the [next] function.
+    [next] {i shall} return [Some x] where [x] is the next element of the
+    sequence or [None] when there is no more elements. 
+*)
+
+val from_loop: 'b -> ('b -> ('a * 'b)) -> 'a t
+(**[from_loop data next] creates a (possibly infinite) sequence from
+   the successive results of applying [next] to [data], then to the
+   result, etc. The list ends whenever the function raises
+   {!BatSeq.No_more_elements}.
+*)
+    
+val unfold: 'b -> ('b -> ('a * 'b) option) -> 'a t
+(**As [from_loop], except uses option type to signal the end of the sequence.
+   [unfold data next] creates a (possibly infinite) sequence from
+   the successive results of applying [next] to [data], then to the
+   result, etc. The sequence ends whenever the function returns [None]
+   Example: [Seq.unfold n (fun x -> if x = 1 then None else Some
+   (x, if x land 1 = 1 then 3 * x + 1 else x / 2))] returns the
+   hailstone sequence starting at [n].
+*)
+    
+val seq : 'a -> ('a -> 'a) -> ('a -> bool) -> 'a t
+(** [seq init step cond] creates a sequence of data, which starts
+    from [init],  extends by [step],  until the condition [cond]
+    fails. E.g. [seq 1 ((+) 1) ((>) 100)] returns [1, 2, ... 99]. If [cond
+    init] is false, the result is empty. *)
     
 val seq : 'a -> ('a -> 'a) -> ('a -> bool) -> 'a t
 (** seq init step cond creates a sequence of data, which starts from init, extends by step, until the condition cond fails. E.g. seq 1 ((+) 1) ((>) 100) returns 1, 2, ... 99. If cond init is false, the result is empty.*)
@@ -229,6 +275,11 @@ val sum : int t -> int
 
 val fsum : float t -> float
 (** sum returns the sum of the given float sequence. If the argument is empty, returns 0.0.*)
+
+val kahan_sum : float t -> float
+(** [kahan_sum l] returns a numerically-accurate sum of the floats of
+    [l]. See {!BatArray.fsum} for more details.
+*)
   
 val equal : ?eq:('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   (** [equal ~eq s1 s2] compares elements of [s1] and [s2] pairwise
@@ -254,15 +305,16 @@ val for_all : ('a -> bool) -> 'a t -> bool
     [(p a0) && (p a1) && ...]. Eager, shortcut.
 *)
 
+val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+(** As {!Seq.for_all} but on two sequences.
+    @raise Invalid_argument if the two sequences have different lengths.
+*)
+
 val exists : ('a -> bool) -> 'a t -> bool
 (** [exists p (cons a0 (cons a1 ...))] checks if at least one element of
     the sequence satisfies the predicate [p]. That is, it returns
     [(p a0) || (p a1) || ...]. Eager, shortcut.
 *)
-
-val exists2 :  ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
-(** Same as {!Seq.exists}, but for a two-argument predicate. 
-    @raise Invalid_argument if two sequences have different lengths. *)
 
 val mem : 'a -> 'a t -> bool
 (** [mem a l] is true if and only if [a] is equal to an element of
@@ -326,8 +378,7 @@ val drop_while : ('a -> bool) -> 'a t -> 'a t
     elements satisfying the predicate [f] dropped. Lazy. *)
 
 val skip : int -> 'a t -> 'a t
-(** skip n e removes the first n element from the sequence, if any, then returns empty sequence.
-    This function has the same behavior as drop but is often easier to compose with, e.g., skip 5 %> take 3 is a new function which skips 5 elements and then returns the next 3 elements.*)
+(** aleas to drop.*)
 
 
 (** {6 Sequence of pairs} *)
@@ -392,6 +443,8 @@ val scan : ('a -> 'a -> 'a) -> 'a t -> 'a t
 (** scan is similar to scanl but without the init value: if s contains x1, x2, x3 ..., scan f s is the sequence containing x1, f x1 x2, f (f x1 x2) x3... 
     For instance, scan ( * ) (1 -- 10) will produce a sequence containing the successive values of the factorial function.*)
 
+val foldi : (int -> 'a -> 'b -> 'b) -> 'b -> 'a t -> 'b
+  
 val fold2 : ('a -> 'b -> 'c -> 'c) -> 'c -> 'a t -> 'b t -> 'c
 (** fold2 is similar to fold_left but will fold over two enumerations at the same time until one of the two enumerations ends.*)
 
@@ -403,7 +456,16 @@ val group : ('a -> 'b) -> 'a t -> 'a t t
 
 val group_by : ('a -> 'a -> bool) -> 'a t -> 'a t t
 (** group_by eq e divides e into a sequence of sequences, where each sub-sequence is the longest continuous enumeration of elements that are equal, as judged by eq.*)
-                                                                             
+
+val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
+(** Cartesian product of the two sequences.
+*)
+
+val switch : ('a -> bool) -> 'a t -> 'a t * 'a t
+(** [switch test seq] splits [seq] into two sequences, where the first sequence has
+    all the elements satisfying [test], the second sequence is opposite. The
+    order of elements in the source seq is preserved. *)
+                                       
 (** {6 Printing} *)
 
 val print : ?first:string -> ?last:string -> ?sep:string -> ('a BatInnerIO.output -> 'b -> unit) ->  'a BatInnerIO.output -> 'b t -> unit

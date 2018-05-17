@@ -1145,8 +1145,16 @@ let of_backwards e =
     
 let rec of_seq s =
   match s () with
-  | Nil -> []
-  | Cons(x, s) -> x :: of_seq s
+  | BatSeq.Nil -> []
+  | BatSeq.Cons(x, s) -> x :: of_seq s
+
+
+let seq l =
+  let rec aux l () = match l with
+    | [] -> BatSeq.Nil
+    | x::l' -> BatSeq.Cons(x, aux l')
+  in
+  aux l
                     
 let assoc_inv e l =
   let rec aux = function

@@ -776,6 +776,10 @@ val of_seq : 'a BatSeq.t -> 'a list
 (** Build a list from a sequence. In the result, elements appear in the
     same order as they did in the source sequence. *)
 
+val seq : 'a list -> 'a BatSeq.t
+(** Build a sequence from a list. In the result, elements appear in the
+    same order as they did in the source list. *)
+                          
 (** {6 List of pairs}*)
 
 val split : ('a * 'b) list -> 'a list * 'b list
