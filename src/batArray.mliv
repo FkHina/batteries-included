@@ -507,6 +507,12 @@ val of_backwards : 'a BatEnum.t -> 'a array
     the enumeration as the last element of the array and vice
     versa. *)
 
+val seq : 'a array -> 'a BatSeq.t
+(** Build a sequence from an array *)
+
+val of_seq : 'a BatSeq.t -> 'a array
+(** Build an array from a sequence *)
+
 (** {6 Utilities} *)
 
 val range : 'a array -> int BatEnum.t

@@ -301,7 +301,7 @@ let range ?until x =
   in seq x ( ( + ) 1 ) cond
 
 (*$T range
-  range 1 ~until:5 |> to_list= [1;2;3;4;5]
+  range 1 ~until:5 |> List.of_seq= [1;2;3;4;5]
 *)
 
 let of_list l =
@@ -310,63 +310,6 @@ let of_list l =
     | x::l' -> Cons(x, aux l')
   in
   aux l
-
-let rec to_list s =
-  match s () with
-  | Nil -> []
-  | Cons(x, s) -> x :: to_list s
-
-(*$T to_list
-  to_list (of_list [1;2;3;4;5]) = [1;2;3;4;5]
-*)
-
-let of_array a = 
-  let rec aux i () =
-    match a with 
-    |[||] -> Nil 
-    |_ -> if (i < Array.length a) then Cons(Array.get a i, aux (i+1)) else Nil
-  in 
-  aux 0
-
-(*$T of_array
-  equal (of_array [|1;2;3;4;5|]) (of_list [1;2;3;4;5])
-*)
-
-let to_array s = 
-  let r= ref s in 
-  let n = length s in 
-  Array.init n (fun _ -> match !r () with
-      | Nil -> assert false
-      | Cons(e, s) ->
-        r := s;
-        e)           
-
-(*$T to_array
-  to_array (of_list [1;2;3;4;5]) = [|1;2;3;4;5|]
-*)
-
-let of_string str =
-  let rec aux i () = match str with
-    |"" -> Nil
-    |_ ->if (i < String.length str) then Cons(str.[i], aux (i+1) ) else Nil
-  in
-  aux 0
-
-(*$T of_string
-  equal (of_string "toto") (of_list ['t';'o';'t';'o'])
-*)
-
-let to_string s = let r= ref s in 
-  let n = length s in 
-  String.init n (fun _ -> match !r () with
-      | Nil -> assert false
-      | Cons(e, s) ->
-        r := s;
-        e)     
-
-(*$T to_string
-  to_string (of_list ['t';'o';'t';'o'] ) = "toto"
-*)
 
 let rec iter f s = match s () with
   | Nil -> ()
@@ -602,19 +545,24 @@ let rec combine s1 s2 () = match s1 (), s2 () with
   | _ ->
     raise (Invalid_argument "Seq.combine: different sequence lentgh")
 
-let  uncombine s = 
-  let rec aux s1 s2 s= 
-    match s () with 
-    | Nil -> s1, s2
-    | Cons ((e1, e2), sr) -> aux  (append s1 (singleton e1)) (append s2 (singleton e2)) sr
-  in aux nil nil s
+let uncombine s =
+  let rec aux s =
+    match s () with
+    | Nil -> nil, nil
+    | Cons ((e1, e2), sr) ->
+      let s1, s2 = aux sr  in
+      cons e1 s1, cons e2 s2
+  in
+  aux s 
 
+(* uncomine*)
 (*$T uncombine
   let s1, s2 = uncombine (of_list [1,2;3,4;5,6;7,8;9,0]) \
   in \
   equal s1 (of_list [1;3;5;7;9]) && \
   equal s2 (of_list [2;4;6;8;0])
 *)
+
 
 let rec uniq s () =
   match s () with
@@ -642,16 +590,16 @@ let rec uniq_by  f s () =
 (*$T
   of_list ["a";"A";"b";"c";"C";"b"]\
   |> uniq_by (fun a b -> String.lowercase a = String.lowercase b) \
-  |> to_list = ["a";"b";"c";"b"]
+  |> List.of_seq = ["a";"b";"c";"b"]
 *)
 
 let partition f s=  
-  let rec aux yes_seq no_seq s =  
+  let rec aux  s =  
     match s () with 
-    | Nil -> yes_seq, no_seq
-    | Cons(e, s) -> if f e then aux (append yes_seq (singleton e)) no_seq s else aux yes_seq (append no_seq (singleton e)) s
+    | Nil -> nil, nil
+    | Cons(e, s) -> let s1, s2 = aux s in  if f e then cons e s1, s2 else s1, cons e s2 
   in
-  aux nil nil s
+  aux s
 
 (*$T partition
   let yes_seq, no_seq = partition (fun x -> x mod 2 = 0)  (of_list [1;2;3;4])\
@@ -744,13 +692,13 @@ let rec group f s () =
   |Cons(x, s) -> let r = f x in let xs, ys = span (fun y -> r = f y) s in Cons(cons x xs, group f ys)
 
 (*$T group
-   of_list [1;2;3;4] |> group (fun x -> x) |> map to_list \
-    |> to_list = [[1];[2];[3];[4]]
-   of_list [] |> group (fun x -> x) |> to_list \
+   of_list [1;2;3;4] |> group (fun x -> x) |> map List.of_seq \
+    |> List.of_seq = [[1];[2];[3];[4]]
+   of_list [] |> group (fun x -> x) |> List.of_seq \
    = []
    of_list [1;2;3;5;6;7;9;10;4;5] |> group (fun x -> x mod 2) \
-    |> map to_list\
-    |> to_list =  [[1];[2];[3;5];[6];[7;9];[10;4];[5]]
+    |> map List.of_seq\
+    |> List.of_seq =  [[1];[2];[3;5];[6];[7;9];[10;4];[5]]
 *)
 
 let arg_min f s =
@@ -787,9 +735,9 @@ let rec group_by eq s () =
 (*$T group_by
    of_list [1; 3; 0; 2; 5; 4] \
    |> group_by (fun x y -> x mod 2 = y mod 2) \
-   |> map to_list |> to_list \
+   |> map List.of_seq |> List.of_seq \
    = [[1; 3]; [0; 2]; [5]; [4]]
-   of_list [] |> group_by (=) |> map to_list |> to_list\
+   of_list [] |> group_by (=) |> map List.of_seq |> List.of_seq\
    = [] 
 *)
 
@@ -811,12 +759,12 @@ let cartesian_product a b =
 *)
     
 let switch test s =
-  let rec aux yesSeq noSeq s  =
+  let rec aux  s  =
     match s () with
-    |Nil -> yesSeq, noSeq
-    |Cons (e, s) -> if test e then aux (append yesSeq (singleton e)) noSeq s else aux yesSeq (append noSeq (singleton e)) s
+    |Nil -> nil, nil
+    |Cons (e, s) -> let s1, s2 = aux s in  if test e then cons e s1, s2 else s1, cons e s2
   in
-  aux nil nil s 
+  aux s 
 
 (*$T
   let s1, s2 = switch (fun x -> x mod 2 = 0) (of_list [ 0; 1; 2; 3; 4; 5; 6; 7])\

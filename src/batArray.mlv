@@ -317,7 +317,7 @@ let enum xs =
   )
 *)
 
-
+  
 let backwards xs =
   let rec make start xs =
     BatEnum.make
@@ -360,6 +360,31 @@ let of_enum e =
 
 let of_backwards e =
   of_list (BatList.of_backwards e)
+
+let seq a = 
+  let rec aux i () =
+    match a with 
+    |[||] ->BatSeq.Nil 
+    |_ -> if (i < Array.length a) then BatSeq.Cons(Array.get a i, aux (i+1)) else BatSeq.Nil
+  in 
+  aux 0
+
+(*$T seq
+  BatSeq.equal (seq [|1;2;3;4;5|]) (BatSeq.of_list [1;2;3;4;5])
+*)
+
+let of_seq s = 
+  let r= ref s in 
+  let n = BatSeq.length s in 
+  Array.init n (fun _ -> match !r () with
+      | BatSeq.Nil -> assert false
+      | BatSeq.Cons(e, s) ->
+        r := s;
+        e)           
+
+(*$T of_seq
+  of_seq (BatSeq.of_list [1;2;3;4;5]) = [|1;2;3;4;5|]
+*)
 
 let range xs = BatEnum.(--^) 0 (Array.length xs)
 (*$Q range
