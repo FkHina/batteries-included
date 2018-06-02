@@ -114,7 +114,7 @@ let peek s =
 
 (*$T peek
   peek (of_list [1;2;3;4]) = Some 1
-  peek (empty ()) = None
+  peek (empty) = None
 *)
 
 let get s = try (Some (hd s)) with
@@ -139,7 +139,7 @@ let junk s =
 
 (*$T junk
   equal (junk (of_list [1;2;3;4])) (of_list [2;3;4])
-  try ignore (junk ( empty () )) ; false with Invalid_argument _ -> true
+  try ignore (junk ( empty )) ; false with Invalid_argument _ -> true
 *)
 
 let at s n =
@@ -751,7 +751,7 @@ let rec cartesian_product a b = match a () with
     append (map (fun e -> (x, e)) b) (cartesian_product a b)
   
 (*$T cartesian_product
-  equal (cartesian_product (of_list [1;2]) (of_list ["a";"b"]))
+  equal (cartesian_product (of_list [1;2]) (of_list ["a";"b"]))\
   (of_list [ 1,"a"; 1,"b"; 2,"a"; 2, "b" ])
   equal (cartesian_product (of_list [1;2;3]) (of_list [1]))\
   (of_list [1,1; 2,1; 3,1])
