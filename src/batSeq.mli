@@ -133,8 +133,8 @@ val nil : 'a t
 val cons : 'a -> 'a t -> 'a t
 (** [cons e s = fun () -> Cons(e, s)] *)
 
-val empty : unit -> 'a t
-(** The empty sequence contains no elements.*)
+val empty : 'a t
+(** The empty sequence contains no elements. Alias of {!nil}*)
     
 val make : int -> 'a -> 'a t
 (** [make n e] returns the sequence of length [n] where all elements

@@ -31,7 +31,7 @@ let nil () = Nil
 
 let cons e s () = Cons(e, s)
 
-let empty () = fun () -> Nil 
+let empty  = fun () -> Nil 
 
 let length s =
   let rec aux acc s = match s () with
@@ -273,9 +273,10 @@ let from_loop data next =
         a)
 
 let unfold data next =
-  from_loop data (fun data -> match next data with
-      | None   -> raise No_more_elements
-      | Some x -> x )
+  from_loop data
+    (fun data -> match next data with
+      | None -> raise No_more_elements
+      | Some x -> x)
 
 (*$T unfold
   equal (unfold 5 (fun x -> if x = 1 then None\
@@ -286,7 +287,7 @@ let unfold data next =
 let rec seq acc step cond () =
   if cond acc
   then begin
-    Cons(acc ,seq (step acc) step cond)
+    Cons(acc, seq (step acc) step cond)
   end
   else Nil
 
@@ -295,10 +296,10 @@ let rec seq acc step cond () =
 *)
 
 let range ?until x =
-  let cond =  match until with
-    | None   -> ( fun _ -> true   )
-    | Some n -> ( fun m -> m <= n )
-  in seq x ( ( + ) 1 ) cond
+  let cond m = match until with
+    | None -> true
+    | Some n -> m <= n
+  in seq x (( + ) 1 ) cond
 
 (*$T range
   range 1 ~until:5 |> List.of_seq= [1;2;3;4;5]
@@ -307,7 +308,7 @@ let range ?until x =
 let of_list l =
   let rec aux l () = match l with
     | [] -> Nil
-    | x::l' -> Cons(x, aux l')
+    | x :: l' -> Cons(x, aux l')
   in
   aux l
 
@@ -594,12 +595,15 @@ let rec uniq_by  f s () =
 *)
 
 let partition f s=  
-  let rec aux  s =  
+  let rec aux s =  
     match s () with 
     | Nil -> nil, nil
-    | Cons(e, s) -> let s1, s2 = aux s in  if f e then cons e s1, s2 else s1, cons e s2 
-  in
-  aux s
+    | Cons(e, s) ->
+      let s1, s2 = aux s in
+      if f e
+      then cons e s1, s2
+      else s1, cons e s2 
+  in aux s
 
 (*$T partition
   let yes_seq, no_seq = partition (fun x -> x mod 2 = 0)  (of_list [1;2;3;4])\
@@ -741,20 +745,17 @@ let rec group_by eq s () =
    = [] 
 *)
 
-let cartesian_product a b =
-  let na = length a in
-  let nb = length b in
-  init
-    (na * nb)
-    (fun j -> let i = j / nb in
-      at a i, at b (j - i*nb))
-
+let rec cartesian_product a b = match a () with
+  | Nil -> nil
+  | Cons (x, a)  ->
+    append (map (fun e -> (x, e)) b) (cartesian_product a b)
+  
 (*$T cartesian_product
-  equal (cartesian_product (of_list [1;2]) (of_list ["a";"b"]))\
+  equal (cartesian_product (of_list [1;2]) (of_list ["a";"b"]))
   (of_list [ 1,"a"; 1,"b"; 2,"a"; 2, "b" ])
   equal (cartesian_product (of_list [1;2;3]) (of_list [1]))\
   (of_list [1,1; 2,1; 3,1])
-  equal (cartesian_product (of_list [1]) (of_list [1;2;3])) \
+  equal (cartesian_product (of_list [1]) (of_list [1;2;3]))\
     (of_list [1,1; 1,2; 1,3])
 *)
     
